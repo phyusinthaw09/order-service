@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { joinUrl } from "../config/paths";
-import { CreateOrderResult, Order, OrderItem } from "./orders.types";
+import { PaymentService } from "../payment/payment.service";
+import { CreateOrderResult, Order, OrderItem, PaymentResult } from "./orders.types";
 
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || "http://localhost:3002/inventory";
 
@@ -8,6 +9,8 @@ const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || "http://local
 export class OrdersService {
   private readonly orders: Order[] = [];
   private orderSequence = 1;
+
+  constructor(private readonly paymentService: PaymentService) {}
 
   getOrders(): Order[] {
     return [...this.orders].reverse();
@@ -23,6 +26,14 @@ export class OrdersService {
       const qty = Number(item.qty || 0);
       return sum + price * qty;
     }, 0);
+
+    const orderId = String(this.orderSequence++);
+
+    const payment = await this.paymentService.authorize(orderId, total);
+    if (!payment.approved) {
+      const order = this.saveOrder(orderId, items, total, "failed", payment);
+      return { order, error: payment.message };
+    }
 
     const stockItems = items.map((item) => {
       const productId = Number(item.productId);
@@ -52,7 +63,7 @@ export class OrdersService {
       stockError = "inventory-service unreachable";
     }
 
-    const order = this.saveOrder(items, total, status);
+    const order = this.saveOrder(orderId, items, total, status, payment);
 
     if (status === "failed") {
       return { order, error: stockError || "Stock reduction failed" };
@@ -61,12 +72,19 @@ export class OrdersService {
     return { order };
   }
 
-  private saveOrder(items: OrderItem[], total: number, status: Order["status"]): Order {
+  private saveOrder(
+    id: string,
+    items: OrderItem[],
+    total: number,
+    status: Order["status"],
+    payment: PaymentResult,
+  ): Order {
     const order = {
-      id: String(this.orderSequence++),
+      id,
       items,
       total,
       status,
+      payment,
       createdAt: new Date().toISOString(),
     };
     this.orders.push(order);

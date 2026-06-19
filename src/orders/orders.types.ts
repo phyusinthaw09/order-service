@@ -10,6 +10,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: "confirmed" | "failed";
+  payment?: PaymentResult;
   createdAt: string;
 }
 
@@ -20,4 +21,10 @@ export interface CreateOrderRequest {
 export interface CreateOrderResult {
   order?: Order;
   error?: string;
+}
+
+export interface PaymentResult {
+  approved: boolean;
+  transactionId?: string | null;
+  message: string;
 }

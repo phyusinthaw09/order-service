@@ -2,8 +2,8 @@
 
 NestJS API service for the workshop POS demo.
 
-The service receives orders from `pos-app` and calls `inventory-service`
-internally to reduce product stock.
+The service receives orders from `pos-app`, calls `payment-service` to authorize
+payment, then calls `inventory-service` internally to reduce product stock.
 
 ## Run Locally
 
@@ -40,6 +40,12 @@ Inventory is configured as the full service base URL:
 INVENTORY_SERVICE_URL=http://localhost:3002/inventory
 ```
 
+Payment is configured as the full service base URL:
+
+```env
+PAYMENT_SERVICE_URL=http://localhost:3003/payment
+```
+
 ## Endpoints
 
 ```text
@@ -66,6 +72,20 @@ For Docker Compose, use Docker's internal service name:
 INVENTORY_SERVICE_URL=http://inventory-service:3002/inventory
 ```
 
+## Payment Service
+
+For local runs:
+
+```bash
+PAYMENT_SERVICE_URL=http://localhost:3003/payment npm start
+```
+
+For Docker Compose, use Docker's internal service name:
+
+```text
+PAYMENT_SERVICE_URL=http://payment-service:3003/payment
+```
+
 ## Docker
 
 Build from this directory:
@@ -80,6 +100,7 @@ Run:
 docker run --rm -p 3001:3001 \
   -e ORDER_BASE_PATH=/order \
   -e INVENTORY_SERVICE_URL=http://host.docker.internal:3002/inventory \
+  -e PAYMENT_SERVICE_URL=http://host.docker.internal:3003/payment \
   order-service:latest
 ```
 
